@@ -127,5 +127,4 @@ if __name__ == "__main__":
 
                 print(l2_match)
                 
-        import pdb; pdb.set_trace()
         print("hi")
