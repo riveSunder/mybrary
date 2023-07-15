@@ -55,7 +55,7 @@ if __name__ == "__main__":
     query = args.query
     filename = args.input
     path = args.directory
-    k = 3
+    k = 1
 
     with torch.no_grad():
         path = "data"
@@ -64,67 +64,86 @@ if __name__ == "__main__":
 
 #        for filename in dir_list:
 #            if filename.endswith("pdf"):
-#
+
+        vector_filepath = os.path.join(path, \
+                f"{os.path.splitext(filename)[0]}.pt") 
+
+
         filepath = os.path.join(path, filename)
 
         text = extract_text(filepath)
-        text_list = fragment_text(text.split(" "), 96, 0.125)
+        text_list = fragment_text(text.split(" "), 96, 0.5)
 
         my_model="sentence-transformers/multi-qa-mpnet-base-dot-v1"
     
         tokenizer = AutoTokenizer.from_pretrained(my_model)
         model = AutoModel.from_pretrained(my_model)
 
-        embeddings = None
+        if os.path.exists(vector_filepath):
+            print(f"loading pre-computed vectors from {vector_filepath}")
+            embeddings = torch.load(vector_filepath)
+        else:
 
-        # single sample at a time (low ram on laptop)
-        for ii in range(len(text_list)):
 
-            if embeddings == None:
-                embeddings = get_embedding(text_list[ii:ii+1], model, tokenizer)
+            embeddings = None
+
+            # single sample at a time (low ram on laptop)
+            for ii in range(len(text_list)):
+
+                if embeddings == None:
+                    embeddings = get_embedding(text_list[ii:ii+1], model, tokenizer)
+                else:
+                    embedding = get_embedding(text_list[ii:ii+1], model, tokenizer)
+                    embeddings = torch.cat([embeddings, embedding]) 
+            
+
+            torch.save(embeddings, vector_filepath)
+
+        query_again = True
+        while query_again:
+            query_embeddings = get_embedding(query, model, tokenizer)
+
+            cosine_matrix = torch.zeros(query_embeddings.shape[0], \
+                    embeddings.shape[0])
+            l2_matrix = torch.zeros(query_embeddings.shape[0], \
+                    embeddings.shape[0])
+
+            for index, query_embedding in enumerate(query_embeddings):
+                cosine_similarities = torch.tensor(cosine_similarity(query_embedding, embeddings))
+                l2_distances = l2_distance(query_embedding, embeddings)
+
+                cosine_matrix[index,:] = cosine_similarities #torch.tensor(cosine_similarities)
+                l2_matrix[index,:] = l2_distances
+
+                cosine_indices = list(np.argsort(cosine_similarities))
+                l2_indices = list(np.argsort(l2_distances))
+                cosine_indices.reverse()
+
+                for kk in range(k):
+                    # top_k best results
+
+                    idx = cosine_indices[kk]
+
+                    cosine_match = f"{kk}th best match for query {query[index]}"\
+                            f"\n\t with cosine similarity {cosine_similarities[idx]:.3f}"\
+                            f"\n\n {text_list[idx]}"
+
+                    print(cosine_match)
+
+                for kk in range(k):
+                    # top_k best results
+
+                    idx = cosine_indices[kk]
+
+                    l2_match = f"{kk}th best match for query {query[index]}"\
+                            f"\n\t with l2 distance {l2_distances[:, idx].item():.3f}"\
+                            f"\n\n {text_list[idx]}"
+
+                    print(l2_match)
+                    
+            query = [input("enter another query (0 to end)")]
+
+            if query[0] == "0":
+                query_again = False
             else:
-                embedding = get_embedding(text_list[ii:ii+1], model, tokenizer)
-                embeddings = torch.cat([embeddings, embedding]) 
-        
-
-        query_embeddings = get_embedding(query, model, tokenizer)
-
-        cosine_matrix = torch.zeros(query_embeddings.shape[0], \
-                embeddings.shape[0])
-        l2_matrix = torch.zeros(query_embeddings.shape[0], \
-                embeddings.shape[0])
-
-        for index, query_embedding in enumerate(query_embeddings):
-            cosine_similarities = torch.tensor(cosine_similarity(query_embedding, embeddings))
-            l2_distances = l2_distance(query_embedding, embeddings)
-
-            cosine_matrix[index,:] = cosine_similarities #torch.tensor(cosine_similarities)
-            l2_matrix[index,:] = l2_distances
-
-            cosine_indices = list(np.argsort(cosine_similarities))
-            l2_indices = list(np.argsort(l2_distances))
-            cosine_indices.reverse()
-
-            for kk in range(k):
-                # top_k best results
-
-                idx = cosine_indices[kk]
-
-                cosine_match = f"{kk}th best match for query {query[index]}"\
-                        f"\n\t with cosine similarity {cosine_similarities[idx]:.3f}"\
-                        f"\n\n {text_list[idx]}"
-
-                print(cosine_match)
-
-            for kk in range(k):
-                # top_k best results
-
-                idx = cosine_indices[kk]
-
-                l2_match = f"{kk}th best match for query {query[index]}"\
-                        f"\n\t with l2 distance {l2_distances[:, idx].item():.3f}"\
-                        f"\n\n {text_list[idx]}"
-
-                print(l2_match)
-                
-        print("hi")
+                query_again = True
