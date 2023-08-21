@@ -50,12 +50,15 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input", type=str,\
         default="Evolution_of_Autopoiesis_and_Multicellularity_in_t.pdf",\
         help="filename for pdf of interest")
+    parser.add_argument("-k", "--k", type=int,\
+        default=3,\
+        help="k for top-k matches to report")
 
     args = parser.parse_args()
     query = args.query
     filename = args.input
     path = args.directory
-    k = 1
+    k = args.k
 
     with torch.no_grad():
         path = "data"
