@@ -8,8 +8,6 @@ import numpy as np
 
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModel
-#text = extract_text("example.pdf")
-
 
 def fragment_text(text: str, max_length: int, overlap: float=0.5):
 
