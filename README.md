@@ -2,6 +2,8 @@
 
 `mybrary` is a simple tool I use to search pdfs using vector similarity metrics on tranformer language model embeddings. 
 
+It uses pdfminer to parse pdf text, and a sentence transformer model (Hugging Face) to generate vector embeddings. Currently, `pdf_search` uses [L2 distance](https://en.wikipedia.org/wiki/Euclidean_distance) and [cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity). 
+
 # Getting started
 
 I use `virtualenv` to manage dependencies in a virtual environment:
@@ -82,4 +84,4 @@ enter another query (0 to end)
 
 ```
 
-In the above case cosine similarity and l2 distance return the same passage, but these sometimes differ. 
+In the above case cosine similarity and L2 distance return the same passage, but these sometimes differ. 
